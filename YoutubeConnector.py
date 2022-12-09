@@ -1,5 +1,6 @@
 import asyncio
 import platform
+import queue
 import sqlite3
 from pprint import pprint
 import selenium.common.exceptions
@@ -41,6 +42,20 @@ yt_dlp.extractor.common.InfoExtractor.report_download_webpage = lambda *args, **
 
 def remove_playlist_link_part(songlist: list[str]):
     return [(song[0].split('&')[0], song[1], song[2]) for song in songlist]
+
+
+class Playlist:
+    def __init__(self, name: str, creator: str, SongQueue):
+        self.queue = SongQueue
+        self.name = name
+        self.creator = creator
+
+
+class Song:
+    def __init__(self, name: str, filepath, creator):
+        self.name = name
+        self.filepath = filepath
+        self.creator = creator
 
 
 class AudioHandler:
@@ -93,7 +108,7 @@ class AudioHandler:
         except ValueError:
             pass
 
-
+# TODO: Check if the return values of .fetchone() and .fetchall() are valid.
 class Database:
     def __init__(self, path: str):
         self.connection = sqlite3.Connection(path)
@@ -102,9 +117,14 @@ class Database:
 
     def create(self):
         self.cursor.execute('CREATE TABLE IF NOT EXISTS songs ('
-                            'name PRIMARY KEY NOT NULL, '
-                            'filepath UNIQUE NOT NULL,'
-                            'creator NOT NULL'
+                            'name TEXT PRIMARY KEY NOT NULL, '
+                            'filepath TEXT UNIQUE NOT NULL,'
+                            'creator TEXT NOT NULL'
+                            ')')
+
+        self.cursor.execute('CREATE TABLE IF NOT EXISTS playlists('
+                            'name TEXT PRIMARY KEY NOT NULL,'
+                            'songs BLOB NOT NULL'
                             ')')
         self.connection.commit()
 
@@ -112,6 +132,26 @@ class Database:
         __new_cursor = self.connection.cursor()
         __new_cursor.execute('''INSERT INTO songs VALUES (?, ?, ?)''', (name, filename, creator))
         self.connection.commit()
+
+    def load_all_songs(self):
+        __new_cursor = self.connection.cursor()
+        __new_cursor.execute('SELECT * FROM songs')
+        songs = __new_cursor.fetchall()
+        return songs
+
+    def load_song(self, name: str):
+        __new_cursor = self.connection.cursor()
+        __new_cursor.execute('SELECT * FROM songs WHERE name = ?', name)
+        song = __new_cursor.fetchone()
+        return Song(song[0], song[1], song[2])
+
+    def load_playlist(self, name: str):
+        __new_cursor = self.connection.cursor()
+        __new_cursor.execute('SELECT * FROM playlists WHERE name = ?', name)
+        result = __new_cursor.fetchall()
+        simple_queue = queue.Queue()
+        [simple_queue.put(song) for song in json.loads(result[1])]
+        return Playlist(result[0], simple_queue)
 
 
 class YoutubeMusic:
@@ -334,8 +374,10 @@ class YoutubeMusic:
     def add_song(self, url: tuple[str, str, str]):
         self.queue.put(self.download(url))
 
-    def add_playlist(self, url: tuple[str, str, str], force_order: bool = False, length: str |
-                                                                                         int =
+    def add_song_to_queue(self, SongName: str):
+        self.queue.put({'type': 'song', 'name': SongName})
+
+    def add_playlist(self, url: tuple[str, str, str], force_order: bool = False, length: str | int =
     'full'):
         songlist = self._fetch_songs_from_playlist(url, length=length)
         songlist = remove_playlist_link_part(songlist)
@@ -346,6 +388,12 @@ class YoutubeMusic:
                                              songlist]).start()
         else:
             [self.queue.put(self.download(song)) for song in songlist]
+
+    def add_playlist_to_queue(self, PlaylistName):
+        # self.queue.put({'type': 'playlist', 'name': PlaylistName})
+        for song in self.db.load_playlist(PlaylistName).queue:
+            self.queue.put({'type': 'song', 'name': song.name})
+
 
     def download(self, url: tuple[str, str, str]) -> tuple[str, str, str]:
         ydl_opts = {
@@ -367,6 +415,15 @@ class YoutubeMusic:
                 os.mkdir('cache')
 
             filename = f'{info["fulltitle"]} [{info["display_id"]}].wav'
+
+            if info.get('uploader') is not None:
+                channel = info.get('uploader')
+            elif info.get('channel') is not None:
+                channel = info.get('channel')
+            else:
+                channel = 'NOT DEFINED'
+
+            self.db.save_song(info['title'], filename, channel)
 
             if platform.platform() == 'Windows':
                 try:
@@ -391,9 +448,12 @@ class YoutubeMusic:
             time.sleep(0.5)
             self.play()
 
-        path = self.queue.get()
+        path: dict = self.queue.get()
 
-        print(f'Now plays {path[1]} from {path[2]}')
+        if path.get('type') == 'song':
+            song: Song = self.db.load_song(path.get('name'))
+
+        print(f'Now plays {song.name} from {song.creator}')
 
         # self.audioplayer = pyaudio.PyAudio()
         self.musicplayer = AudioHandler(path[0])  # , self.audioplayer)
