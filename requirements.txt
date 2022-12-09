@@ -28,3 +28,6 @@ websockets==10.4
 wheel==0.37.1
 wsproto==1.2.0
 yt-dlp==2022.11.11
+
+pydub~=0.25.1
+kthread~=0.2.3

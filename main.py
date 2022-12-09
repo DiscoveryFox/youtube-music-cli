@@ -1,32 +1,30 @@
 import time
 
-import fetch_feed
-import selenium
-import undetected_chromedriver as uc
+import YoutubeConnector
 
 """ Deprecated. 
 chrome_driver = selenium.webdriver.chrome.service.Service('./chromedriver.exe')
 driver = selenium.webdriver.Chrome(service=chrome_driver, options=chrome_options)
 """
 
-chrome_options = selenium.webdriver.chrome.options.Options()
-chrome_options.add_argument('start-maximized')
-chrome_options.add_argument('--headless')
-chrome_options.add_argument('--lang=en_US')
-chrome_options.add_argument('--user-agent = Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:15.0) Gecko/20100101 Firefox/15.0.1')
+with YoutubeConnector.YoutubeMusic(timeout=10) as youtubeMusic:
+    query_result = youtubeMusic.search_official_playlists('deutschrap', length=5)
 
-undetected_driver = uc.Chrome(options=chrome_options)
+    print('Starting download')
+    youtubeMusic.add_playlist(query_result[0], length=10)
 
-youtubeMusic = fetch_feed.YoutubeMusic(undetected_driver)
+    print('Download Done now continue')
 
-search_result = youtubeMusic.search('paradise coldplay')
+    search_result = youtubeMusic.search_song('paradise coldplay')
 
-print('Starting Playing')
-youtubeMusic.add_song(search_result[1])
-youtubeMusic.add_song(youtubeMusic.search('999 (Remix)')[0])
-youtubeMusic.play()
-print('Started Playing')
-time.sleep(5)
-print('Still Playing')
-time.sleep(10)
-youtubeMusic.skip()
+    print('Starting Playing')
+    youtubeMusic.add_song(search_result[1])
+    youtubeMusic.play()
+    youtubeMusic.add_song(youtubeMusic.search_song('999 (Remix)')[0])
+    while True:
+        x = input('Skip Y/n | Stop S:')
+        if x == 'S':
+            youtubeMusic.stop()
+        else:
+            youtubeMusic.skip()
+
