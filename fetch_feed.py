@@ -1,5 +1,11 @@
 import time
-
+import os
+import threading
+import wave
+# portaudio19
+from queue import Queue
+import pyaudio
+import playsound
 import selenium.webdriver
 import selenium.webdriver.remote.webelement
 from selenium.webdriver.common.by import By
@@ -8,6 +14,47 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
 
 from urllib.parse import quote
+
+import sys
+import yt_dlp
+
+
+class AudioHandler:
+    def __init__(self, path: str, audio: pyaudio.PyAudio):
+        self.stream = None
+        self.audio = audio
+        self.wf = None
+        self.path = path
+
+    def callback(self, in_data, frame_count, time_info, status):
+        data = self.wf.readframes(frame_count)
+        return data, pyaudio.paContinue
+
+    def start(self):
+        self.wf = wave.open(self.path, 'rb')
+        self.stream = self.audio.open(format=self.audio.get_format_from_width(
+            self.wf.getsampwidth()),
+            channels=self.wf.getnchannels(),
+            rate=self.wf.getframerate(),
+            output=True,
+            stream_callback=self.callback
+        )
+        self.stream.start_stream()
+        try:
+            while self.stream.is_active():
+                time.sleep(0.1)
+        except OSError:
+            pass
+
+    def stop(self):
+        self.stream.stop_stream()
+        self.stream.close()
+        self.wf.close()
+        self.audio.terminate()
+        try:
+            self.audio.close(self.stream)
+        except ValueError:
+            pass
 
 
 class YoutubeMusic:
@@ -25,11 +72,14 @@ class YoutubeMusic:
         :param password: The password to log into the provided Google account
         :param timeout: The time the page can take to load. The Timeout before an exception is thrown.
         """
+        self.musicplayer = None
+        self.audioplayer = None
         self.driver = driver
         self.logged_in = False
         self.email = email
         self.password = password
         self.timeout = timeout
+        self.queue: Queue = Queue()
 
         self.setup()
 
@@ -95,3 +145,36 @@ class YoutubeMusic:
             result.append(link)
 
         return result
+
+    def add_song(self, url: str):
+        self.queue.put(self.download(url))
+
+    def download(self, url: str) -> str:
+        ydl_opts = {
+            'format': 'bestaudio/best',
+            'postprocessors': [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'wav',
+                'preferredquality': '96',
+            }]
+        }
+
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            ydl: yt_dlp.YoutubeDL
+            info = ydl.extract_info(url)
+            return os.path.abspath(f'{info["fulltitle"]} [{info["display_id"]}].wav')
+
+    def play(self):
+        path = self.queue.get()
+
+        self.audioplayer = pyaudio.PyAudio()
+        self.musicplayer = AudioHandler(path, self.audioplayer)
+        musicthread = threading.Thread(target=self.musicplayer.start)
+        musicthread.start()
+
+    def stop(self):
+        self.musicplayer.stop()
+
+    def skip(self):
+        self.stop()
+        self.play()
