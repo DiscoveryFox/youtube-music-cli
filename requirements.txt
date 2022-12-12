@@ -1,0 +1,6 @@
+selenium==4.7.2
+PyAudio==0.2.12
+playsound==1.2.2
+requests==2.28.1
+pydub==0.25.1
+kthread==0.2.3
