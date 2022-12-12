@@ -1,8 +1,6 @@
-import time
-
 import YoutubeConnector
 
-""" Deprecated. 
+""" Deprecated.
 chrome_driver = selenium.webdriver.chrome.service.Service('./chromedriver.exe')
 driver = selenium.webdriver.Chrome(service=chrome_driver, options=chrome_options)
 """
@@ -27,4 +25,3 @@ with YoutubeConnector.YoutubeMusic(timeout=10) as youtubeMusic:
             youtubeMusic.stop()
         else:
             youtubeMusic.skip()
-
