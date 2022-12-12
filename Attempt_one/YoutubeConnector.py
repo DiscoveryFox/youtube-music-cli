@@ -183,7 +183,10 @@ class YoutubeMusic:
     :param timeout: The time the page can take to load. The Timeout before an exception is thrown.
         """
         self.musicthread = None
-        self.db = Database('cache\\songs.db')
+        if platform.system() == 'Windows':
+            self.db = Database('cache\\songs.db')
+        else:
+            self.db = Database('cache/songs.db')
         if driver is None:
             self.chrome_options = selenium.webdriver.chrome.options.Options()
             self.chrome_options.add_argument('start-maximized')
