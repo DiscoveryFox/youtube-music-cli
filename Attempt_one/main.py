@@ -8,12 +8,12 @@ driver = selenium.webdriver.Chrome(service=chrome_driver, options=chrome_options
 """
 
 with YoutubeConnector.YoutubeMusic(timeout=10) as youtubeMusic:
-    query_result = youtubeMusic.search_official_playlists('deutschrap', length=5)
+    query_result = youtubeMusic.search_official_playlists('deutsch pop')
 
     print('Starting download')
-    youtubeMusic.add_playlist(query_result[0], length=10)
+    youtubeMusic.add_playlist(query_result[0], length=2)
 
-    print('Download Done now continue')
+    print('\nDownload Done now continue')
 
     search_result = youtubeMusic.search_song('paradise coldplay')
 

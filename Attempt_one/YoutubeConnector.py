@@ -36,11 +36,12 @@ import yt_dlp
 
 import yt_dlp.extractor.common
 
-yt_dlp.extractor.common.InfoExtractor.report_warning = lambda *args, **kwargs: ...
-yt_dlp.extractor.common.InfoExtractor.report_download_webpage = lambda *args, **kwargs: ...
+
+# yt_dlp.extractor.common.InfoExtractor.report_warning = lambda *args, **kwargs: ...
+# yt_dlp.extractor.common.InfoExtractor.report_download_webpage = lambda *args, **kwargs: ...
 
 
-def remove_playlist_link_part(songlist: list[str]):
+def remove_playlist_link_part(songlist: list[tuple[str, str, str]]):
     return [(song[0].split('&')[0], song[1], song[2]) for song in songlist]
 
 
@@ -52,7 +53,7 @@ class Playlist:
 
 
 class Song:
-    def __init__(self, name: str, filepath, creator):
+    def __init__(self, name: str, filepath: str, creator: str):
         self.name = name
         self.filepath = filepath
         self.creator = creator
@@ -108,10 +109,11 @@ class AudioHandler:
         except ValueError:
             pass
 
+
 # TODO: Check if the return values of .fetchone() and .fetchall() are valid.
 class Database:
     def __init__(self, path: str):
-        self.connection = sqlite3.Connection(path)
+        self.connection = sqlite3.connect(path, check_same_thread=False)
         self.cursor = self.connection.cursor()
         self.create()
 
@@ -141,17 +143,28 @@ class Database:
 
     def load_song(self, name: str):
         __new_cursor = self.connection.cursor()
-        __new_cursor.execute('SELECT * FROM songs WHERE name = ?', name)
+        __new_cursor.execute('SELECT * FROM songs WHERE name = ?', (name, ))
         song = __new_cursor.fetchone()
         return Song(song[0], song[1], song[2])
 
     def load_playlist(self, name: str):
         __new_cursor = self.connection.cursor()
-        __new_cursor.execute('SELECT * FROM playlists WHERE name = ?', name)
+        __new_cursor.execute('SELECT * FROM playlists WHERE name = ?', (name, ))
         result = __new_cursor.fetchall()
         simple_queue = queue.Queue()
         [simple_queue.put(song) for song in json.loads(result[1])]
         return Playlist(result[0], simple_queue)
+
+    def check_song(self, name: str):
+        __new_cursor = self.connection.cursor()
+        __new_cursor.execute('SELECT * FROM songs WHERE name = ?', (name, ))
+        result = __new_cursor.fetchone()
+        print(name)
+        print(result)
+        if result is not None:
+            return result
+
+
 
 
 class YoutubeMusic:
@@ -315,7 +328,8 @@ class YoutubeMusic:
 
         return result
 
-    def _fetch_songs_from_playlist(self, url: str, length: str | int = 'full') -> list[tuple[str,
+    def _fetch_songs_from_playlist(self, url: tuple[str, str, str], length: str | int = 'full') -> \
+            list[tuple[str,
     str,
     str]]:
         result: list[tuple[str, str, str]] = []
@@ -381,8 +395,7 @@ class YoutubeMusic:
     'full'):
         songlist = self._fetch_songs_from_playlist(url, length=length)
         songlist = remove_playlist_link_part(songlist)
-        self.queue.put(self.download(songlist[0]))
-        del songlist[0]
+
         if not force_order:
             threading.Thread(target=lambda: [self.queue.put(self.download(song)) for song in
                                              songlist]).start()
@@ -394,8 +407,10 @@ class YoutubeMusic:
         for song in self.db.load_playlist(PlaylistName).queue:
             self.queue.put({'type': 'song', 'name': song.name})
 
-
     def download(self, url: tuple[str, str, str]) -> tuple[str, str, str]:
+        print(url[1])
+        self.db.check_song(url[1])
+        print(url[1])
         ydl_opts = {
             'format': 'bestaudio/best',
             'postprocessors': [{
@@ -404,17 +419,18 @@ class YoutubeMusic:
                 'preferredquality': '96',
             }],
             'quiet': True,
-            "external_downloader_args": ['-loglevel', 'panic']
         }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url[0])
             if os.path.isdir('cache'):
-                ...
+                pass
             else:
                 os.mkdir('cache')
 
             filename = f'{info["fulltitle"]} [{info["display_id"]}].wav'
+            if filename not in os.listdir():
+                filename = filename.replace('/', '⧸')
 
             if info.get('uploader') is not None:
                 channel = info.get('uploader')
@@ -423,22 +439,25 @@ class YoutubeMusic:
             else:
                 channel = 'NOT DEFINED'
 
-            self.db.save_song(info['title'], filename, channel)
-
-            if platform.platform() == 'Windows':
+            if platform.system() == 'Windows':
                 try:
-                    os.rename(filename, f'cache/{filename}')
+                    os.rename(f'{filename}', f'cache\\{filename}')
+                    self.db.save_song(info['title'], f'cache\\{filename}', channel)
                 except FileExistsError:
+                    print('Error')
                     os.remove(filename)
                 return (os.path.abspath(f'cache\\{filename}'),
                         url[1],
                         url[2])
             else:
+                print('Not Windows')
+                print(platform.system())
                 try:
-                    os.rename(filename, f'cache/{filename}')
+                    os.rename(filename, f'cache/"{filename}"')
+                    self.db.save_song(info['title'], f'/cache/"{filename}"', channel)
                 except FileExistsError:
                     os.remove(filename)
-                return (os.path.abspath(f'cache/{filename}'),
+                return (os.path.abspath(f'cache/"{filename}"'),
                         url[1],
                         url[2])
 
@@ -449,6 +468,8 @@ class YoutubeMusic:
             self.play()
 
         path: dict = self.queue.get()
+
+        print(path)
 
         if path.get('type') == 'song':
             song: Song = self.db.load_song(path.get('name'))
