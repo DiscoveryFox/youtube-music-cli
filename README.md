@@ -5,4 +5,4 @@
 
 This is the table on how the app should be designed. A completed Readme with Guide will be available when the first release goes online. 
 
-[For editing purposes](https://lucid.app/lucidchart/fd1988c8-9e9b-4063-8aa4-edbca8242c82/edit?page=0_0&invitationId=inv_f7851c29-5a1e-4b59-b843-05b1adf49c52#)
+[Click here to edit Lucidchart](https://lucid.app/lucidchart/fd1988c8-9e9b-4063-8aa4-edbca8242c82/edit?page=0_0&invitationId=inv_f7851c29-5a1e-4b59-b843-05b1adf49c52#)
