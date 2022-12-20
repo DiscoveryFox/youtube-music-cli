@@ -1,8 +1,6 @@
-import asyncio
 import platform
 import queue
 import sqlite3
-from pprint import pprint
 import selenium.common.exceptions
 import time
 import os
@@ -10,31 +8,25 @@ import threading
 import wave
 # portaudio19
 from queue import Queue
-from typing import List, Tuple
 import json
 import pyaudio
-import playsound
-import requests
 import selenium.webdriver
 import selenium.webdriver.remote.webelement
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.keys import Keys
 import requests
 import selenium
-import undetected_chromedriver as uc
+import undetected_chromedriver as uc # NOQA
 from urllib.parse import quote
-from multiprocessing import Process
 
 from pydub import AudioSegment
 import pydub.playback
 
 import kthread
-import sys
-import yt_dlp
+import yt_dlp #NOQA
 
-import yt_dlp.extractor.common
+import yt_dlp.extractor.common #NOQA
 
 
 # yt_dlp.extractor.common.InfoExtractor.report_warning = lambda *args, **kwargs: ...
@@ -83,7 +75,7 @@ class AudioHandler:
             channels=self.wf.getnchannels(),
             rate=self.wf.getframerate(),
             output=True,
-            stream_callback=self.callback
+            stream_callback=self._callback
         )
         self.stream.start_stream()
         try:
@@ -113,6 +105,7 @@ class AudioHandler:
 # TODO: Check if the return values of .fetchone() and .fetchall() are valid.
 class Database:
     def __init__(self, path: str):
+        print(path)
         self.connection = sqlite3.connect(path, check_same_thread=False)
         self.cursor = self.connection.cursor()
         self.create()
@@ -181,7 +174,10 @@ class YoutubeMusic:
     :param timeout: The time the page can take to load. The Timeout before an exception is thrown.
         """
         self.musicthread = None
-        self.db = Database('cache\\songs.db')
+        if platform.system() == 'Windows':
+            self.db = Database('cache\\songs.db')
+        else:
+            self.db = Database('/workspaces/youtube-music-cli/Attempt_one/cache/songs.db')
         if driver is None:
             self.chrome_options = selenium.webdriver.chrome.options.Options()
             self.chrome_options.add_argument('start-maximized')
@@ -220,6 +216,7 @@ class YoutubeMusic:
 
         self.driver.find_element(By.XPATH, '//*[@id="identifierId"]').send_keys(self.email)
         self.driver.find_element(By.XPATH, '//*[@id="identifierNext"]/div/button').click()
+        return False
 
     def setup(self):
         self.driver.get('https://music.youtube.com')
@@ -334,6 +331,7 @@ class YoutubeMusic:
         # new_driver = uc.Chrome(self.driver.)
         options = selenium.webdriver.chrome.options.Options()
         options.add_argument('--headless')
+        options.add_argument('--no-sandbox') 
         new_driver: selenium.webdriver.Chrome = uc.Chrome(options=options)
         print('Starting new Driver')
         new_driver.get(url[0])
