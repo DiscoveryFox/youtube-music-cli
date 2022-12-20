@@ -143,13 +143,13 @@ class Database:
 
     def load_song(self, name: str):
         __new_cursor = self.connection.cursor()
-        __new_cursor.execute('SELECT * FROM songs WHERE name = ?', (name, ))
+        __new_cursor.execute('SELECT * FROM songs WHERE name = ?', (name,))
         song = __new_cursor.fetchone()
         return Song(song[0], song[1], song[2])
 
     def load_playlist(self, name: str):
         __new_cursor = self.connection.cursor()
-        __new_cursor.execute('SELECT * FROM playlists WHERE name = ?', (name, ))
+        __new_cursor.execute('SELECT * FROM playlists WHERE name = ?', (name,))
         result = __new_cursor.fetchall()
         simple_queue = queue.Queue()
         [simple_queue.put(song) for song in json.loads(result[1])]
@@ -157,14 +157,12 @@ class Database:
 
     def check_song(self, name: str):
         __new_cursor = self.connection.cursor()
-        __new_cursor.execute('SELECT * FROM songs WHERE name = ?', (name, ))
+        __new_cursor.execute('SELECT * FROM songs WHERE name = ?', (name,))
         result = __new_cursor.fetchone()
         print(name)
         print(result)
         if result is not None:
             return result
-
-
 
 
 class YoutubeMusic:
@@ -330,8 +328,8 @@ class YoutubeMusic:
 
     def _fetch_songs_from_playlist(self, url: tuple[str, str, str], length: str | int = 'full') -> \
             list[tuple[str,
-    str,
-    str]]:
+            str,
+            str]]:
         result: list[tuple[str, str, str]] = []
         # new_driver = uc.Chrome(self.driver.)
         options = selenium.webdriver.chrome.options.Options()
