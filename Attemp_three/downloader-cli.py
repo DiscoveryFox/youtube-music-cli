@@ -43,9 +43,9 @@ def main(url, output_dir, database_path):
 
         if database_path_temp == '':
             if '\\' in os.getcwd():
-                database_path_temp = os.path.join(os.getcwd(), 'songs.db')
+                database_path_temp = os.path.join(os.getcwd(), '/songs.db')
             else:
-                database_path_temp = os.path.join(os.getcwd(), 'songs.db')
+                database_path_temp = os.path.join(os.getcwd(), '/songs.db')
 
         set_key('.env', 'DATABASE_PATH',
                 database_path_temp)
@@ -56,7 +56,6 @@ def main(url, output_dir, database_path):
 
     if database_path is None:
         database_path = os.getenv('DATABASE_PATH')
-
     with downloader.YoutubeDownloader(output_dir, database_path) as youtube:
         youtube: downloader.YoutubeDownloader
         if not validators.url(url):
