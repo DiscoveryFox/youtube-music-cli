@@ -26,7 +26,7 @@ def get_id(link: str) -> str:
 
 class YoutubeDownloader:
     def __init__(self, output_directory: str, database_path: str):
-        self.filepath: str = output_directory + '%(title)s.%(ext)s'
+        self.filepath: str = os.path.join(output_directory, '%(title)s.%(ext)s')
         self.output_directory = output_directory  # E.G.: r'C\User\Username\Desktop\Download\\'
         self.db: database.Database = database.Database(database_path)
         self.database_path = database_path
@@ -62,12 +62,13 @@ class YoutubeDownloader:
             title = info.get('title')
 
             print(f'Starting Download for '
-                  f'{Song(name=title, id=get_id(link), creator=channel, filepath=self.output_directory + filename)}')
+                  f''
+                  f'{Song(name=title, id=get_id(link), creator=channel, filepath=os.path.join(self.output_directory,filename))}')
 
             self.db.register_song(Song(name=title,
                                        id=get_id(link),
                                        creator=channel,
-                                       filepath=self.output_directory + filename)
+                                       filepath=os.path.join(self.output_directory, filename))
                                   )
 
             ydl.download([link])
@@ -110,7 +111,7 @@ class YoutubeDownloader:
             self.db.register_playlist(Playlist(name=title,
                                                id=get_id(link),
                                                creator=channel,
-                                               songs=songs
+                                               songs=[get_id(song) for song in songs]
                                                )
                                       )
             # loop through all songs in the playlist and start a download in a new thread for
