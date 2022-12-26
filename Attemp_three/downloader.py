@@ -9,19 +9,15 @@ import validators
 
 import database
 import yt_music_api
+
 from models.Song import Song
 from models.Playlist import Playlist
+from models.Id import get_id
 
 yt_dlp.extractor.common.InfoExtractor.report_warning = lambda *args, **kwargs: ...
 yt_dlp.extractor.common.InfoExtractor.report_download_webpage = lambda *args, **kwargs: ...
 
 warnings.filterwarnings("ignore")
-
-
-def get_id(link: str) -> str:
-    parsed_link = urllib.parse.urlparse(link)
-    query = urllib.parse.parse_qs(parsed_link.query)
-    return query.get('list')[0] if query.get('v') is None else query.get('v')[0]
 
 
 class YoutubeDownloader:
@@ -63,7 +59,7 @@ class YoutubeDownloader:
 
             print(f'Starting Download for '
                   f''
-                  f'{Song(name=title, id=get_id(link), creator=channel, filepath=os.path.join(self.output_directory,filename))}')
+                  f'{Song(name=title, id=get_id(link), creator=channel, filepath=os.path.join(self.output_directory, filename))}')
 
             self.db.register_song(Song(name=title,
                                        id=get_id(link),
